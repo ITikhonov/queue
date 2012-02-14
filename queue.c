@@ -24,9 +24,10 @@ void transfer_file(char *name) {
 	off_t start=0;
 	uint16_t ln=strlen(name);
 
+	write(s,"QEEE",4);
 	write(s,&ln,2);
-	write(s,name,ln);
 	write(s,&len,8);
+	write(s,name,ln);
 
 	sendfile(s,f,&start,len);
 

@@ -1,4 +1,4 @@
 CFLAGS=-g -Wall -Werror
 
-all: queue
+all: queue receiver
 
