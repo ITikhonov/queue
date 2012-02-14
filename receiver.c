@@ -43,7 +43,7 @@ int recvhdr(int s) {
 }
 
 int recvfile(int s) {
-	printf("receiving %s\n",hdr.name);
+	fprintf(stderr,"receiving %s\n",hdr.name);
 	int f=openat(tmpdir,hdr.name,O_WRONLY|O_CREAT,0640);
 	if(f==-1) { return 0; }
 
@@ -64,7 +64,9 @@ int recvfile(int s) {
 	shutdown(s,SHUT_WR);
 
 	renameat(tmpdir,hdr.name,indir,hdr.name);
-	printf("done %s\n",hdr.name);
+	fprintf(stderr,"done %s\n",hdr.name);
+	write(1,&hdr.nlen,2);
+	write(1,hdr.name,hdr.nlen);
 	return 1;
 
 err:
