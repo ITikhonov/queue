@@ -94,8 +94,11 @@ int main(int argc,char *argv[]) {
 	sigemptyset(&act.sa_mask);
 	sigaction(SIGALRM,&act,0);
 
-	act.sa_handler=terminate;
+	act.sa_handler=SIG_IGN;
 	act.sa_flags=SA_RESTART;
+	sigaction(SIGPIPE,&act,0);
+
+	act.sa_handler=terminate;
 	sigaction(SIGTERM,&act,0);
 
 

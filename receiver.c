@@ -83,12 +83,12 @@ int goon=1;
 void terminate(int sig) { goon=0; close(s); }
 
 int main(int argc,char *argv[]) {
-        struct sigaction act={.sa_handler=SIG_IGN,.sa_flags=SA_RESTART};
-        sigemptyset(&act.sa_mask);
-        sigaction(SIGPIPE,&act,0);
+	struct sigaction act={.sa_handler=SIG_IGN,.sa_flags=SA_RESTART};
+	sigemptyset(&act.sa_mask);
+	sigaction(SIGPIPE,&act,0);
 
-        act.sa_handler=terminate;
-        sigaction(SIGTERM,&act,0);
+	act.sa_handler=terminate;
+	sigaction(SIGTERM,&act,0);
 
 	struct sockaddr_in ba={.sin_family=AF_INET};
 	ba.sin_addr.s_addr=inet_addr(argv[2]);
