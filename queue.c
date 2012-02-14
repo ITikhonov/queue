@@ -14,7 +14,7 @@
 
 struct sockaddr_in da={.sin_family=AF_INET};
 
-void transfer_file(char *name) {
+int transfer_file(char *name) {
 	int s=socket(AF_INET,SOCK_STREAM,IPPROTO_IP);
 	int f=open(name,O_RDONLY);
 
@@ -31,9 +31,14 @@ void transfer_file(char *name) {
 
 	sendfile(s,f,&start,len);
 
+	char o=0;
+	read(s,&o,1);
+	if(o!='O') return 0;
+
 	close(s);
 	close(f);
 	unlink(name);
+	return 1;
 }
 
 int main(int argc,char *argv[]) {
@@ -49,7 +54,7 @@ int main(int argc,char *argv[]) {
 		char buf[sizeof(struct inotify_event)+PATH_MAX+1];
 		struct inotify_event *e=(struct inotify_event*)buf;
 		read(fs,e,sizeof(buf));
-		transfer_file(e->name);
+		while(!transfer_file(e->name)) ;;
 	}
 	close(fs);
 

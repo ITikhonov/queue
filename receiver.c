@@ -58,6 +58,10 @@ int recvfile(int s) {
 		r+=rr;
 	}
 	close(f);
+
+	write(s,"O",1);
+	shutdown(s,SHUT_WR);
+
 	renameat(tmpdir,hdr.name,indir,hdr.name);
 	return 1;
 
