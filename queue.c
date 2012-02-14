@@ -2,7 +2,6 @@
 
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <sys/inotify.h>
 #include <sys/sendfile.h>
 #include <arpa/inet.h>
 #include <linux/limits.h>
@@ -70,7 +69,7 @@ int filter(const struct dirent *e) {
 	return e->d_name[0]!='.';
 }
 
-void send_stale() {
+int send_stale() {
 	struct dirent **list;
 	int n=scandir(".",&list,filter,versionsort);
 	int i;
@@ -79,6 +78,7 @@ void send_stale() {
 		free(list[i]);
 	}
 	free(list);
+	return n;
 }
 
 int main(int argc,char *argv[]) {
@@ -91,18 +91,11 @@ int main(int argc,char *argv[]) {
 	sigemptyset(&act.sa_mask);
 	sigaction(SIGALRM,&act,0);
 
-	int fs=inotify_init();
-	inotify_add_watch(fs,".",IN_MOVED_TO);
-
-	send_stale();
 
 	for(;;) {
-		char buf[sizeof(struct inotify_event)+PATH_MAX+1];
-		struct inotify_event *e=(struct inotify_event*)buf;
-		if(read(fs,e,sizeof(buf))<1) { exit(1); }
-		while(!transfer_file(e->name)) sleep(1);
+		while(send_stale()!=0) ;;
+		sleep(1);
 	}
-	close(fs);
-
+	return 0;
 }
 
