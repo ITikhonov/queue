@@ -81,6 +81,9 @@ int send_stale() {
 	return n;
 }
 
+int goon=1;
+void terminate(int sig) { if(!goon) close(s); goon=0; }
+
 int main(int argc,char *argv[]) {
 	da.sin_addr.s_addr=inet_addr(argv[2]);
 	da.sin_port=htons(atoi(argv[3]));
@@ -91,8 +94,12 @@ int main(int argc,char *argv[]) {
 	sigemptyset(&act.sa_mask);
 	sigaction(SIGALRM,&act,0);
 
+	act.sa_handler=terminate;
+	act.sa_flags=SA_RESTART;
+	sigaction(SIGTERM,&act,0);
 
-	for(;;) {
+
+	for(;goon;) {
 		while(send_stale()!=0) ;;
 		sleep(1);
 	}
