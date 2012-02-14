@@ -11,6 +11,8 @@
 #include <stdint.h>
 #include <string.h>
 
+int indir=-1;
+int tmpdir=-1;
 
 struct {
 	uint32_t magic;
@@ -41,7 +43,9 @@ int recvhdr(int s) {
 }
 
 int recvfile(int s) {
-	int f=open(hdr.name,O_WRONLY|O_CREAT,0640);
+	int f=openat(tmpdir,hdr.name,O_WRONLY|O_CREAT,0640);
+	if(f==-1) { return 0; }
+
 	char buf[65535];
 	int r=0;
 	for(;r<hdr.flen;) {
@@ -49,12 +53,18 @@ int recvfile(int s) {
 		if(tr>sizeof(buf)) tr=sizeof(buf);
 
 		int rr=read(s,buf,tr);
-		if(rr<1) return 0;
+		if(rr<1) goto err;
 		write(f,buf,rr);
 		r+=rr;
 	}
 	close(f);
+	renameat(tmpdir,hdr.name,indir,hdr.name);
 	return 1;
+
+err:
+	close(f);
+	unlinkat(tmpdir,hdr.name,0);
+	return 0;
 }
 
 int main(int argc,char *argv[]) {
@@ -65,7 +75,10 @@ int main(int argc,char *argv[]) {
 	bind(s,(struct sockaddr*)&ba,sizeof(ba));
 	listen(s,1024);
 
-	if(chdir(argv[1])) exit(1);
+	indir=open("in",O_RDONLY);
+	if(indir==-1) exit(1);
+	tmpdir=open("tmp",O_RDONLY);
+	if(tmpdir==-1) exit(1);
 
 	for(;;) {
 		int a=accept(s,0,0);
