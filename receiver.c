@@ -1,3 +1,5 @@
+#include <signal.h>
+
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/sendfile.h>
@@ -76,11 +78,22 @@ err:
 	return 0;
 }
 
+int s=-1;
+int goon=1;
+void terminate(int sig) { goon=0; close(s); }
+
 int main(int argc,char *argv[]) {
+        struct sigaction act={.sa_handler=SIG_IGN,.sa_flags=SA_RESTART};
+        sigemptyset(&act.sa_mask);
+        sigaction(SIGPIPE,&act,0);
+
+        act.sa_handler=terminate;
+        sigaction(SIGTERM,&act,0);
+
 	struct sockaddr_in ba={.sin_family=AF_INET};
 	ba.sin_addr.s_addr=inet_addr(argv[2]);
 	ba.sin_port=htons(atoi(argv[3]));
-        int s=socket(AF_INET,SOCK_STREAM,IPPROTO_IP);
+        s=socket(AF_INET,SOCK_STREAM,IPPROTO_IP);
 	bind(s,(struct sockaddr*)&ba,sizeof(ba));
 	listen(s,1024);
 
@@ -89,14 +102,14 @@ int main(int argc,char *argv[]) {
 	tmpdir=open("tmp",O_RDONLY);
 	if(tmpdir==-1) exit(1);
 
-	for(;;) {
+	for(;goon;) {
 		int a=accept(s,0,0);
-		if(recvhdr(a)) {
+		if(a!=-1 && recvhdr(a)) {
 			recvfile(a);
 		}
 		close(a);
 	}
 	close(s);
-
+	return 0;
 }
 
