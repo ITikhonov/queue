@@ -62,6 +62,7 @@ err:
 	alarm(0);
 	close(s);
 	close(f);
+	printf("error %s\n",name);
 	return 0;
 }
 
