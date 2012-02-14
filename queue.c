@@ -15,16 +15,24 @@
 #include <string.h>
 
 #include <dirent.h>
+#include <signal.h>
 
 struct sockaddr_in da={.sin_family=AF_INET};
+
+int s=-1;
+void abort_transfer(int sig) {
+	close(s);
+}
 
 int transfer_file(char *name) {
 	printf("transfer %s\n",name);
 
-	int s=socket(AF_INET,SOCK_STREAM,IPPROTO_IP);
+	s=socket(AF_INET,SOCK_STREAM,IPPROTO_IP);
 	int f=open(name,O_RDONLY);
 
+	alarm(10);
 	if(connect(s,(struct sockaddr*)&da,sizeof(da))==-1) goto err;
+	alarm(0);
 
 	uint64_t len=lseek(f,0,SEEK_END);
 	off_t start=0;
@@ -35,7 +43,11 @@ int transfer_file(char *name) {
 	write(s,&len,8);
 	write(s,name,ln);
 
-	sendfile(s,f,&start,len);
+	for(;start<len;) {
+		alarm(10);
+		if(sendfile(s,f,&start,10240)==-1) goto err;
+	}
+	alarm(0);
 
 	char o=0;
 	read(s,&o,1);
@@ -47,6 +59,7 @@ int transfer_file(char *name) {
 	printf("done %s\n",name);
 	return 1;
 err:
+	alarm(0);
 	close(s);
 	close(f);
 	return 0;
@@ -73,6 +86,10 @@ int main(int argc,char *argv[]) {
 
 	if(chdir(argv[1])) exit(1);
 
+	struct sigaction act={.sa_handler=abort_transfer,.sa_flags=0};
+	sigemptyset(&act.sa_mask);
+	sigaction(SIGALRM,&act,0);
+
 	int fs=inotify_init();
 	inotify_add_watch(fs,".",IN_MOVED_TO);
 
@@ -81,7 +98,7 @@ int main(int argc,char *argv[]) {
 	for(;;) {
 		char buf[sizeof(struct inotify_event)+PATH_MAX+1];
 		struct inotify_event *e=(struct inotify_event*)buf;
-		read(fs,e,sizeof(buf));
+		if(read(fs,e,sizeof(buf))<1) { exit(1); }
 		while(!transfer_file(e->name)) sleep(1);
 	}
 	close(fs);
